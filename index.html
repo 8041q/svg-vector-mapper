@@ -5,7 +5,19 @@
     <title>Thailand Interactive Map</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #fbfbfb; }
+        :root{
+            --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --popup-font-size: 14px;
+            --popup-line-height: 1.45;
+            --popup-color: #222;
+            --popup-bg: #ffffff;
+            --popup-padding: 12px;
+            --popup-radius: 6px;
+            --popup-accent: #0a84ff;
+            --popup-max-width: clamp(220px, 28vw, 520px);
+        }
+
+        body { font-family: var(--ui-font); margin: 20px; background: #fbfbfb; color: #222; }
         svg {
             width: 100%;        /* fill the card width */
             height: auto;
@@ -33,27 +45,85 @@
         /* consolidated popup rules; toggle `.open` in JS to show/hide */
         .popup {
             position: absolute;
-            background: #fff;
-            border: 1px solid #ccc;
-            padding: 10px;
+            background: var(--popup-bg);
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: var(--popup-padding);
             pointer-events: auto;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 160ms ease, transform 160ms ease;
-            transform: translateY(6px);
-            max-width: 20%;
+            transition: opacity 220ms cubic-bezier(.2,.9,.2,1), transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease;
+            transform: translateY(6px) scale(.98);
+            max-width: var(--popup-max-width);
             white-space: normal;
             word-wrap: break-word;
             overflow-wrap: anywhere;
-            line-height: 1.3;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            line-height: var(--popup-line-height);
+            border-radius: var(--popup-radius);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
             z-index: 10000;
+            font-family: var(--ui-font);
+            font-size: var(--popup-font-size);
+            color: var(--popup-color);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Large variant (can be toggled via JS) */
+        .popup--large {
+            max-width: clamp(360px, 40vw, 760px);
+        }
+
+        /* Mobile: make popups full-width-ish and remove decorative pointer */
+        @media (max-width: 520px) {
+            .popup {
+                position: fixed;
+                left: 12px !important;
+                right: 12px !important;
+                top: auto !important;
+                bottom: 12px !important;
+                transform: translateY(0) scale(1);
+                max-width: calc(100% - 24px);
+                border-radius: 10px;
+                box-shadow: 0 12px 36px rgba(0,0,0,0.14);
+            }
+            .popup::after { display: none; }
+            .popup img { max-height: 180px; }
+        }
+        .popup strong { font-weight: 600; font-size: 1.05em; color: #111; }
+        .popup p { margin: 0.35em 0 0; }
+        /* popup images: responsive, constrained height, rounded corners */
+        .popup img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+            margin: 0 0 8px;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 260ms ease, transform 260ms ease;
+        }
+        /* (no explicit close button styles — popup remains open while hovered or managed by handlers) */
+        /* decorative pointer (may not align perfectly with cursor) */
+        .popup::after{
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 100%;
+            margin-top: 8px;
+            width: 12px;
+            height: 12px;
+            transform: translateX(-50%) rotate(45deg);
+            background: var(--popup-bg);
+            border-left: 1px solid rgba(0,0,0,0.08);
+            border-top: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.02);
+            z-index: -1;
         }
         .popup.open {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
+            box-shadow: 0 12px 36px rgba(0,0,0,0.12);
         }
 
           /* While the modifier key is held, disable overlay pointer-events
@@ -571,6 +641,8 @@
 
         // Hotspots: predefined points with metadata
         const popup = d3.select('body').append('div').attr('class', 'popup');
+        // popup structure: content container (no close button or auto-close handlers)
+        popup.append('div').attr('class', 'popup-content');
 
         let hotspots = [
             {
@@ -668,8 +740,20 @@
                     .style('stroke-width', strokePx + 'px')
                     .style('fill', 'rgba(215,38,61,0.65)')
                     .on('mouseover', function(event) {
-                        const imgHtml = h.imageUrl ? `<img src="${h.imageUrl}" alt="${h.title}" style="width:100%;height:auto;margin-bottom:6px;display:block;">` : '';
-                        popup.html(imgHtml + `<strong>${h.title}</strong><br>${h.description}`).classed('open', true);
+                        const imgHtml = h.imageUrl ? `<img src="${h.imageUrl}" alt="${h.title}">` : '';
+                        popup.select('.popup-content').html(imgHtml + `<strong>${h.title}</strong><br><p>${h.description}</p>`);
+                        popup.classed('open', true);
+                        // animate image fade-in when present (handles cached images too)
+                        const img = popup.select('.popup-content').select('img');
+                        if (!img.empty()) {
+                            img.style('opacity', 0).style('transform', 'translateY(6px)');
+                            const node = img.node();
+                            if (node && node.complete) {
+                                img.style('opacity', 1).style('transform', 'translateY(0)');
+                            } else {
+                                img.on('load', function() { d3.select(this).style('opacity', 1).style('transform', 'translateY(0)'); });
+                            }
+                        }
                     })
                     .on('mousemove', function(event) {
                         try {
