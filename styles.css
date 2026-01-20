@@ -1,0 +1,157 @@
+:root{
+    --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --popup-font-size: 14px;
+    --popup-line-height: 1.45;
+    --popup-color: #222;
+    --popup-bg: #ffffff;
+    --popup-padding: 12px;
+    --popup-radius: 6px;
+    --popup-accent: #0a84ff;
+    --popup-max-width: clamp(220px, 28vw, 520px);
+}
+
+body { font-family: var(--ui-font); margin: 20px; background: #fbfbfb; color: #222; }
+svg {
+    width: 100%;        /* fill the card width */
+    height: auto;
+    max-width: 100%;
+    display: block;
+    margin: 0 auto;
+    border: none;
+    box-sizing: border-box;
+    border-radius: 8px;
+}
+#map-controls { position: fixed; left: 10px; top: 10px; background: rgba(255,255,255,0.95); border:1px solid #ccc; padding:8px; z-index:9999; font-size:13px; }
+.state { fill: #B9E8E4; stroke: #fff; stroke-width: 0.5; }
+/* highlight state border on hover */
+.state:hover { stroke: #000 !important; stroke-width: 1.2px !important; vector-effect: non-scaling-stroke;}
+/* Per-state fills are computed in JS to produce a single hue with varying lightness */
+.hotspot {
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    fill: rgba(255,0,0,0.35);
+    stroke: rgb(200,0,0);
+    stroke-width: 1px;
+}
+.tooltip { position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; pointer-events: none; opacity: 0; }
+/* consolidated popup rules; toggle `.open` in JS to show/hide */
+.popup {
+    position: absolute;
+    background: var(--popup-bg);
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: var(--popup-padding);
+    pointer-events: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 220ms cubic-bezier(.2,.9,.2,1), transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms ease;
+    transform: translateY(6px) scale(.98);
+    max-width: var(--popup-max-width);
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    line-height: var(--popup-line-height);
+    border-radius: var(--popup-radius);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    z-index: 10000;
+    font-family: var(--ui-font);
+    font-size: var(--popup-font-size);
+    color: var(--popup-color);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+/* Large variant (can be toggled via JS) */
+.popup--large {
+    max-width: clamp(360px, 40vw, 760px);
+}
+
+/* Mobile: make popups full-width-ish and remove decorative pointer */
+@media (max-width: 520px) {
+    .popup {
+        position: fixed;
+        left: 12px !important;
+        right: 12px !important;
+        top: auto !important;
+        bottom: 12px !important;
+        transform: translateY(0) scale(1);
+        max-width: calc(100% - 24px);
+        border-radius: 10px;
+        box-shadow: 0 12px 36px rgba(0,0,0,0.14);
+    }
+    .popup::after { display: none; }
+    .popup img { max-height: 180px; }
+}
+.popup strong { font-weight: 600; font-size: 1.05em; color: #111; }
+.popup p { margin: 0.35em 0 0; }
+/* popup images: responsive, constrained height, rounded corners */
+.popup img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+    margin: 0 0 8px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 260ms ease, transform 260ms ease;
+}
+/* (no explicit close button styles — popup remains open while hovered or managed by handlers) */
+/* decorative pointer (may not align perfectly with cursor) */
+.popup::after{
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 100%;
+    margin-top: 8px;
+    width: 12px;
+    height: 12px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--popup-bg);
+    border-left: 1px solid rgba(0,0,0,0.08);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.02);
+    z-index: -1;
+}
+.popup.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+}
+
+  /* While the modifier key is held, disable overlay pointer-events
+      so wheel and pointer interactions reach the SVG. Toggled by JS. */
+.map-interaction-active .popup,
+.map-interaction-active #map-controls {
+    pointer-events: none !important;
+}
+.map-card h1 {
+    font-family: inherit;
+    text-align: left;
+    font-size: 1.75rem;
+    margin: 8px 0 12px;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+    font-weight: bold;
+    color: rgb(51, 51, 51);
+    margin: 0px;
+    padding-top: 0rem;
+    padding-bottom: 1rem;
+}
+.map-card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18); /* moved stronger shadow here */
+    overflow: hidden; /* clip child svg corners */
+    max-width: 1040px;
+    width: calc(100% - 32px);
+    box-sizing: border-box;
+    margin: 12px auto;
+}
+
+@media (max-width: 520px) {
+    .map-card { padding: 10px; width: calc(100% - 20px); }
+    .map-card h1 { font-size: 20px; margin: 6px 0 10px; }
+}
