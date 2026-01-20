@@ -33,8 +33,9 @@ svg {
     fill: rgba(255,0,0,0.35);
     stroke: rgb(200,0,0);
     stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
 }
-.tooltip { position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; pointer-events: none; opacity: 0; }
+.tooltip { position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; pointer-events: none; opacity: 0; z-index: 10003; }
 /* consolidated popup rules; toggle `.open` in JS to show/hide */
 .popup {
     position: absolute;
@@ -53,7 +54,7 @@ svg {
     line-height: var(--popup-line-height);
     border-radius: var(--popup-radius);
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    z-index: 10000;
+    z-index: 10002;
     font-family: var(--ui-font);
     font-size: var(--popup-font-size);
     color: var(--popup-color);
@@ -140,18 +141,131 @@ svg {
     padding-bottom: 1rem;
 }
 .map-card {
+    position: relative; /* create stacking context */
+    z-index: 10001; /* ensure the map/card sits above page-level popups when needed */
     background: #ffffff;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.18); /* moved stronger shadow here */
     overflow: hidden; /* clip child svg corners */
-    max-width: 1040px;
     width: calc(100% - 32px);
     box-sizing: border-box;
-    margin: 12px auto;
+    border-radius: 8px;
 }
+
+/* Ensure the card lays out header/content vertically and the map
+   fills remaining space so the SVG height is dynamic and never
+   extends past the card's bottom. */
+.map-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr; /* meta/header row, then map row */
+    gap: 12px;
+    align-items: start;
+    min-height: 0;
+}
+
+/* Left column: any content before `#map` (e.g. h1, img) will occupy
+   the first column. Place the map in the second column and allow it
+   to stretch to fill the available height. */
+.map-card > #map { grid-column: 1; grid-row: 2; min-height: 280px; display: flex; align-items: center; justify-content: center; height: 100%; align-self: stretch; justify-self: stretch; }
+
+/* Let the SVG scale to fill the map area while preserving aspect ratio */
+.map-card > #map svg, .map-area svg {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Ensure any direct children that are not the map (e.g. h1, img)
+   occupy the left column so the map stays on the right. */
+.map-meta { grid-column: 1; grid-row: 1; width: 100%; justify-self: start; align-self: start; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
+
+/* Collapse top-row to stacked (title above logo) on small screens */
+@media (max-width: 520px) {
+    .map-meta { grid-template-columns: 1fr; gap: 8px; }
+    .map-meta img { justify-self: start; }
+}
+
+/* On wide layouts ensure the left column doesn't push the map below
+    by allowing the right column to stretch and the map to span rows. */
+.map-card { align-items: start; }
+
+/* (two-row layout is used on all widths; small-screen tweaks below) */
 
 @media (max-width: 520px) {
     .map-card { padding: 10px; width: calc(100% - 20px); }
     .map-card h1 { font-size: 20px; margin: 6px 0 10px; }
+}
+
+/* App layout: two-column, almost-fullscreen and no page scroll */
+html, body { height: 100%; }
+body { margin: 0; background: #fbfbfb; }
+.app-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 12px;
+    padding: 12px;
+    min-height: 100vh; /* fill the viewport */
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden; /* prevent page scrolling */
+}
+.state-list {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    padding: 12px;
+    overflow: auto;
+}
+
+/* Hide scrollbars but keep scroll functionality across browsers */
+.state-list {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+.state-list::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
+
+/* Prevent page-level scrollbars and hide them while preserving
+   scrolling inside scrollable elements like `.state-list`. This
+   avoids scrollbars appearing when panning the map to the viewport
+   edges. */
+html, body {
+    overflow: hidden; /* avoid global page scrolling */
+    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none; /* Firefox */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+/* Prevent scroll chaining/overscroll and disable touch panning on map */
+html, body, .app-layout { overscroll-behavior: none; }
+.map-area, .map-card, #map, svg { overscroll-behavior: none; }
+svg, #map { touch-action: none; -ms-touch-action: none; }
+
+/* Hide scrollbars globally (aggressive) */
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; }
+.state-list h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.state-list .states { list-style: none; padding: 0; margin: 0; }
+.state-list .states li { padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 6px; font-size: 14px; }
+.state-list .states li:hover { background: #f4f7fb; }
+.state-list .states li.active { background: var(--popup-accent); color: #fff; font-weight: 600; }
+
+.map-area { overflow: hidden; display: flex; align-items: stretch; min-height: 0; }
+.map-area .map-card { flex: 1 1 auto; height: 100%; margin: 0; min-height: 0; }
+/* Let the SVG scale by width while constraining its height to the
+    available container; centering via the #map flex wrapper prevents
+    overflow from padding and keeps the map visually centered. */
+.map-area svg { width: 100%; height: auto; max-height: 100%; display: block; }
+
+/* Ensure the map wrapper fills the card and centers the SVG */
+#map { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+/* highlight visual for an active state on the map — use existing black border */
+.state--active { stroke: #000 !important; stroke-width: 1.2px !important; vector-effect: non-scaling-stroke;}
+
+@media (max-width: 800px) {
+    .app-layout { grid-template-columns: 1fr; height: auto; padding: 8px; }
+    .state-list { order: 2; }
+    .map-area { order: 1; }
 }
