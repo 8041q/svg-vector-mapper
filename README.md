@@ -156,16 +156,19 @@ Each map can have its own color palette defined in `colorConfig`:
 
 ## License
 
-## License
-
 The source code in this repository is licensed under the MIT License.
 See the `LICENSE` file for details.
 
 ### Assets / Images
 
 All images, artwork, and other visual assets included in this repository
-are **NOT** covered by the MIT License.
+are **NOT** covered by the MIT License, **except where explicitly stated otherwise**.
 
 All rights to these assets are reserved. They may not be used, copied,
 modified, or redistributed without explicit written permission from the
 copyright holder.
+
+#### SVG Map Files
+
+The SVG files used as maps **are licensed under the MIT License**
+and may be used under the same terms as the source code.
